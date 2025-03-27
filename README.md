@@ -28,9 +28,7 @@ __Доступные адреса (эндпоинты) и функции:__
 * ![logs_without_pagination.JPG](README%2Flogs_without_pagination.JPG)
 * ![logs_with_pagination.JPG](README%2Flogs_with_pagination.JPG)
 
-## Порядок запуска
-
-* ### _Отправка запроса информации:_
+### Порядок запуска
 * Клонировать: `git clone https://github.com/ildarius116/TRON_FAST_API.git`
 * Установить зависимости: `pip install -r requirements.txt`
 * Запустить сервис: `uvicorn app.main:app --reload`
