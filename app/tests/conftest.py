@@ -1,7 +1,7 @@
 import pytest_asyncio
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import AsyncSessionLocal, init_db, drop_db
+from app.database import async_session, init_db, drop_db
 from app.models import RequestLog
 
 
@@ -20,7 +20,7 @@ async def db_session(test_db) -> AsyncSession:
     """
     Функция-фикстура асинхронной сессии
     """
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         yield session
         await session.close()
 

@@ -15,7 +15,7 @@ engine: AsyncEngine = create_async_engine(
     echo=eval(DEBUG)
 )
 
-AsyncSessionLocal = async_sessionmaker(
+async_session = async_sessionmaker(
     bind=engine,
     autocommit=False,
     autoflush=False,
@@ -28,7 +28,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Функция-генератор асинхронных сессий.
     """
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         try:
             yield session
             await session.commit()
@@ -39,7 +39,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-# 6. Инициализация БД (для lifespan)
 async def init_db() -> None:
     """
     Функция создает все таблицы при старте приложения
@@ -49,6 +48,8 @@ async def init_db() -> None:
 
 
 async def drop_db() -> None:
-    """Функция уУдаления всех таблиц (для тестов)"""
+    """
+    Функция уУдаления всех таблиц (для тестов)
+    """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

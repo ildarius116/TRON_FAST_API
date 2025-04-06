@@ -80,9 +80,9 @@ async def get_address_info(request: AddressRequest,
     )
 
     # сохранение данных в БД
-    db.add(log)
-    await db.commit()
-    await db.refresh(log)
+    async with db.begin():
+        db.add(log)
+        await db.commit()
 
     return {
         "address": address,
@@ -109,8 +109,9 @@ async def get_logs(page: int = 1,
     skip: int = (page - 1) * per_page
 
     # запрос к БД с учетом смещения
-    result = await db.execute(select(RequestLog).order_by(RequestLog.timestamp.desc()).offset(skip).limit(per_page))
-    logs = result.scalars().all()
+    async with db.begin():
+        result = await db.execute(select(RequestLog).order_by(RequestLog.timestamp.desc()).offset(skip).limit(per_page))
+        logs = result.scalars().all()
 
     return {
         "page": page,
