@@ -15,6 +15,7 @@ _Техническое задание:_
 
 __Доступные адреса (эндпоинты) и функции:__
 
+* `/docs/` - адрес api-сваггера
 * `/address/` - адрес отправки запроса информации в сеть Торн
 * `/logs/` - адрес просмотра списка последних записей из БД
 * `/logs/?page=1&per_page=5` - адрес просмотра списка последних записей из БД с указанием пагинации
@@ -31,7 +32,7 @@ __Доступные адреса (эндпоинты) и функции:__
 ### Порядок запуска
 * Клонировать: `git clone https://github.com/ildarius116/TRON_FAST_API.git`
 * Установить зависимости: `pip install -r requirements.txt`
-* Запустить сервис: `uvicorn app.main:app --reload`
+* Запустить сервис: `uvicorn src.main:app --reload`
 
 ### _Примечания:_
 1. Если необходимо добавить `.env`-файл, в нем следует указать следующие данные:
@@ -46,4 +47,5 @@ TRON_NETWORK = "shasta"
 DEBUG = True
 ```
 2. Если необходимо запустить сервис на определенном хосте и порту, то указать это в строке запуска:
-`uvicorn app.main:app --host $API_HOST --port $API_PORT --reload` (н-р: `uvicorn app.main:app --host 192.168.1.100 --port 8800 --reload`)
+`uvicorn src.main:app --host $API_HOST --port $API_PORT --reload` (н-р: `uvicorn src.main:app --host 192.168.1.100 --port 8800 --reload`)
+3. Если необходимо запустить тесты, то необходимо ввести команду: `pytest`

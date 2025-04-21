@@ -6,8 +6,8 @@ from datetime import datetime
 Base = declarative_base()
 
 
-class RequestLog(Base):
-    __tablename__ = 'request_logs'
+class HistoryModel(Base):
+    __tablename__ = 'history'
 
     id: int = Column(Integer, primary_key=True)
     address: str = Column(String(42), nullable=False)
@@ -17,4 +17,4 @@ class RequestLog(Base):
     timestamp: datetime = Column(TIMESTAMP, server_default=func.now())
 
     def __repr__(self) -> str:
-        return f"<RequestLog(id={self.id}, address={self.address})>"
+        return f"<History(id={self.id}, address={self.address})>"

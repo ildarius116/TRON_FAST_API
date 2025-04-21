@@ -1,8 +1,9 @@
 import pytest_asyncio
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import async_session, init_db, drop_db
-from app.models import RequestLog
+
+from src.database import async_session, init_db, drop_db
+from src.models.history import HistoryModel
 
 
 @pytest_asyncio.fixture(scope="module")
@@ -30,6 +31,6 @@ async def clean_db(db_session: AsyncSession):
     """
     Функция-фикстура очистки БД перед тестом
     """
-    await db_session.execute(delete(RequestLog))
+    await db_session.execute(delete(HistoryModel))
     await db_session.commit()
     yield

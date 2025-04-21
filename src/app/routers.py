@@ -3,12 +3,12 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tronpy import Tron
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import Dict, Any
 from dotenv import load_dotenv
-from pydantic import BaseModel
-from app.models import RequestLog
-from app.database import get_db
+from src.models.history import HistoryModel
+from src.schemas.address import AddressRequestSchema, AddressResponseSchema
+from src.schemas.history import HistoryResponseSchemas
+from src.database import get_db
 
 load_dotenv()
 TRON_NETWORK = os.getenv('TRON_NETWORK', "shasta")
@@ -16,41 +16,19 @@ TRON_NETWORK = os.getenv('TRON_NETWORK', "shasta")
 router = APIRouter()
 
 
-class AddressRequest(BaseModel):
-    address: str
-
-
-class AddressResponse(BaseModel):
-    address: str
-    bandwidth: Optional[float]
-    energy: Optional[float]
-    balance: Optional[float]
-
-
-class LogResponse(BaseModel):
-    address: str
-    bandwidth: Optional[float]
-    energy: Optional[float]
-    balance: Optional[float]
-    timestamp: datetime
-
-
-class LogsResponse(BaseModel):
-    page: int
-    per_page: int
-    logs: List[LogResponse]  # Используем уже существующую LogResponse
-
-
-@router.post("/address/", response_model=AddressResponse)
-async def get_address_info(request: AddressRequest,
+@router.post(path="/address/",
+             response_model=AddressResponseSchema,
+             tags=["Получение данных TRON-кошельков"],
+             summary="Запрос данных кошелька",
+             )
+async def get_address_info(request: AddressRequestSchema,
                            db: AsyncSession = Depends(get_db)
                            ) -> Dict[str, Any]:
     """
     Функция - эндпоинт "/address/" запроса информации по адресу в сети "Трон"
 
-    :param request: Запрос, содержащий искомый адрес
-    :param db: БД для хранения результатов запроса
-    :return: Словарь данных о кошельке
+    :параметр - address: Адрес кошелька \n
+    :возврат: Словарь данных о кошельке
     """
     # проверка (валидация) адреса
     address: str = request.address.strip()
@@ -72,7 +50,7 @@ async def get_address_info(request: AddressRequest,
     bandwidth: float = account.get('bandwidth', {}).get('available', 0.0)
     energy: float = account.get('energy', {}).get('available', 0.0)
 
-    log: RequestLog = RequestLog(
+    log: HistoryModel = HistoryModel(
         address=address,
         bandwidth=bandwidth,
         energy=energy,
@@ -80,9 +58,8 @@ async def get_address_info(request: AddressRequest,
     )
 
     # сохранение данных в БД
-    async with db.begin():
-        db.add(log)
-        await db.commit()
+    db.add(log)
+    await db.commit()
 
     return {
         "address": address,
@@ -92,26 +69,29 @@ async def get_address_info(request: AddressRequest,
     }
 
 
-@router.get("/logs/", response_model=LogsResponse)
+@router.get(path="/logs/",
+            response_model=HistoryResponseSchemas,
+            tags=["Получение данных TRON-кошельков"],
+            summary="История запросов",
+            )
 async def get_logs(page: int = 1,
                    per_page: int = 10,
                    db: AsyncSession = Depends(get_db)
                    ) -> Dict[str, Any]:
     """
-    Функция - эндпоинт "/logs/" запроса информации по истории (Логам) полученных данных из сети "Трон"
+    Функция - эндпоинт "/logs/" запроса информации по истории полученных данных из сети "Трон"
 
-    :param page: номер текущей страницы отображения данных
-    :param per_page: количество (элементов) данных на одной странице
-    :param db: БД для хранения результатов запроса
-    :return: Пагинированный словарь данных Логов
+    :параметр - page: Номер страницы данных \n
+    :параметр - per_page: Количество данных на одной странице \n
+    :возврат: Пагинированный словарь данных истории запросов
     """
     # Офсет (смещение) списка данных
     skip: int = (page - 1) * per_page
 
     # запрос к БД с учетом смещения
-    async with db.begin():
-        result = await db.execute(select(RequestLog).order_by(RequestLog.timestamp.desc()).offset(skip).limit(per_page))
-        logs = result.scalars().all()
+    query = select(HistoryModel).order_by(HistoryModel.timestamp.desc()).offset(skip).limit(per_page)
+    result = await db.execute(query)
+    logs = result.scalars().all()
 
     return {
         "page": page,
