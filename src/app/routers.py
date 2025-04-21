@@ -1,14 +1,13 @@
 import os
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from tronpy import Tron
 from typing import Dict, Any
 from dotenv import load_dotenv
 from src.models.history import HistoryModel
 from src.schemas.address import AddressRequestSchema, AddressResponseSchema
 from src.schemas.history import HistoryResponseSchemas
-from src.database import get_db
+from src.app.dependencies import PaginationDep, SessionDep
 
 load_dotenv()
 TRON_NETWORK = os.getenv('TRON_NETWORK', "shasta")
@@ -22,7 +21,7 @@ router = APIRouter()
              summary="Запрос данных кошелька",
              )
 async def get_address_info(request: AddressRequestSchema,
-                           db: AsyncSession = Depends(get_db)
+                           db_session: SessionDep,
                            ) -> Dict[str, Any]:
     """
     Функция - эндпоинт "/address/" запроса информации по адресу в сети "Трон"
@@ -58,8 +57,8 @@ async def get_address_info(request: AddressRequestSchema,
     )
 
     # сохранение данных в БД
-    db.add(log)
-    await db.commit()
+    db_session.add(log)
+    await db_session.commit()
 
     return {
         "address": address,
@@ -74,9 +73,8 @@ async def get_address_info(request: AddressRequestSchema,
             tags=["Получение данных TRON-кошельков"],
             summary="История запросов",
             )
-async def get_logs(page: int = 1,
-                   per_page: int = 10,
-                   db: AsyncSession = Depends(get_db)
+async def get_logs(pagination: PaginationDep,
+                   db_session: SessionDep,
                    ) -> Dict[str, Any]:
     """
     Функция - эндпоинт "/logs/" запроса информации по истории полученных данных из сети "Трон"
@@ -86,16 +84,19 @@ async def get_logs(page: int = 1,
     :возврат: Пагинированный словарь данных истории запросов
     """
     # Офсет (смещение) списка данных
-    skip: int = (page - 1) * per_page
+    offset: int = (pagination.page - 1) * pagination.per_page
 
     # запрос к БД с учетом смещения
-    query = select(HistoryModel).order_by(HistoryModel.timestamp.desc()).offset(skip).limit(per_page)
-    result = await db.execute(query)
+    query = (select(HistoryModel).
+             order_by(HistoryModel.timestamp.desc()).
+             offset(offset).
+             limit(pagination.per_page))
+    result = await db_session.execute(query)
     logs = result.scalars().all()
 
     return {
-        "page": page,
-        "per_page": per_page,
+        "page": pagination.page,
+        "per_page": pagination.per_page,
         "logs": [
             {
                 "address": log.address,

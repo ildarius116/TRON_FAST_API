@@ -5,19 +5,19 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Dict
 
-from src.database import get_db
+from src.database import get_db_session
 from src.main import app
 from src.models.history import HistoryModel
 
 
 @pytest.mark.asyncio
-async def test_db_save_with_real_flow(db_session: AsyncSession):
+async def test_db_save_with_real_flow(test_db_session: AsyncSession):
     """
     Тест корректности сохранения данных в БД через API
     """
     # подготовка (очистка) БД
-    await db_session.execute(delete(HistoryModel))
-    await db_session.commit()
+    await test_db_session.execute(delete(HistoryModel))
+    await test_db_session.commit()
 
     # создание мок-данных
     mock_account_data: Dict[str, Any] = {
@@ -29,18 +29,18 @@ async def test_db_save_with_real_flow(db_session: AsyncSession):
     with patch("tronpy.tron.Tron.get_account", return_value=mock_account_data), \
             patch("tronpy.tron.Tron.is_address", return_value=True):
         # подмена зависимости БД
-        app.dependency_overrides[get_db] = lambda: db_session
+        app.dependency_overrides[get_db_session] = lambda: test_db_session
 
         # имитация вызова API
         client = TestClient(app)
         response = client.post(
-            "/address/",
+            url="/address/",
             json={"address": "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL"}
         )
 
         assert response.status_code == 200
-        result = await db_session.execute(select(HistoryModel).where(
-            HistoryModel.address == "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL"))
+        query = select(HistoryModel).where(HistoryModel.address == "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL")
+        result = await test_db_session.execute(query)
         log = result.scalars().first()
         assert log is not None
         assert log.balance == 1000.0
@@ -49,13 +49,13 @@ async def test_db_save_with_real_flow(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_create_log_entry(db_session: AsyncSession):
+async def test_create_log_entry(test_db_session: AsyncSession):
     """
     Тест создания записи в БД напрямую
     """
     # подготовка (очистка) БД
-    await db_session.execute(delete(HistoryModel))
-    await db_session.commit()
+    await test_db_session.execute(delete(HistoryModel))
+    await test_db_session.commit()
 
     test_log = HistoryModel(
         address="test_address_1",
@@ -65,11 +65,11 @@ async def test_create_log_entry(db_session: AsyncSession):
     )
 
     # добавление данных в БД
-    db_session.add(test_log)
-    await db_session.commit()
+    test_db_session.add(test_log)
+    await test_db_session.commit()
 
     # запрос данных из БД
-    result = await db_session.execute(select(HistoryModel))
+    result = await test_db_session.execute(select(HistoryModel))
     logs = result.scalars().all()
 
     assert len(logs) == 1
@@ -78,11 +78,11 @@ async def test_create_log_entry(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_multiple_log_entries(db_session: AsyncSession):
+async def test_multiple_log_entries(test_db_session: AsyncSession):
     """Тест создания нескольких записей"""
     # подготовка (очистка) БД
-    await db_session.execute(delete(HistoryModel))
-    await db_session.commit()
+    await test_db_session.execute(delete(HistoryModel))
+    await test_db_session.commit()
 
     logs = [
         HistoryModel(address=f"test_address_{i}", bandwidth=i * 10, energy=i * 5, balance=i * 100)
@@ -90,11 +90,11 @@ async def test_multiple_log_entries(db_session: AsyncSession):
     ]
 
     # добавление данных в БД
-    db_session.add_all(logs)
-    await db_session.commit()
+    test_db_session.add_all(logs)
+    await test_db_session.commit()
 
     # запрос данных из БД
-    result = await db_session.execute(select(HistoryModel).order_by(HistoryModel.address))
+    result = await test_db_session.execute(select(HistoryModel).order_by(HistoryModel.address))
     saved_logs = result.scalars().all()
 
     assert len(saved_logs) == 3
@@ -104,11 +104,11 @@ async def test_multiple_log_entries(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_log_entry_fields(db_session: AsyncSession):
+async def test_log_entry_fields(test_db_session: AsyncSession):
     """Тест корректности заполнения полей"""
     # подготовка (очистка) БД
-    await db_session.execute(delete(HistoryModel))
-    await db_session.commit()
+    await test_db_session.execute(delete(HistoryModel))
+    await test_db_session.commit()
 
     test_log = HistoryModel(
         address="full_fields_address",
@@ -118,9 +118,9 @@ async def test_log_entry_fields(db_session: AsyncSession):
     )
 
     # добавление данных в БД
-    db_session.add(test_log)
-    await db_session.commit()
-    await db_session.refresh(test_log)
+    test_db_session.add(test_log)
+    await test_db_session.commit()
+    await test_db_session.refresh(test_log)
 
     # проверка
     assert test_log.id is not None
@@ -132,18 +132,18 @@ async def test_log_entry_fields(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_required_fields(db_session: AsyncSession):
+async def test_required_fields(test_db_session: AsyncSession):
     """Тест обязательных полей модели"""
     # подготовка (очистка) БД
-    await db_session.execute(delete(HistoryModel))
-    await db_session.commit()
+    await test_db_session.execute(delete(HistoryModel))
+    await test_db_session.commit()
 
     test_log = HistoryModel(address="required_only")
 
     # добавление данных в БД
-    db_session.add(test_log)
-    await db_session.commit()
-    await db_session.refresh(test_log)
+    test_db_session.add(test_log)
+    await test_db_session.commit()
+    await test_db_session.refresh(test_log)
 
     # проверка
     assert test_log.address == "required_only"

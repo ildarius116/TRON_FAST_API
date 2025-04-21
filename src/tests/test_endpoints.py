@@ -6,7 +6,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Dict
 
-from src.database import get_db
+from src.database import get_db_session
 from src.main import app
 from src.models.history import HistoryModel
 
@@ -17,7 +17,7 @@ def client():
 
 
 @pytest.mark.asyncio
-async def test_get_logs_without_pages(db_session: AsyncSession):
+async def test_get_logs_without_pages(test_db_session: AsyncSession):
     """
     Тест корректности работы API и формат пагинированного ответа без указания пагинации
     """
@@ -32,7 +32,7 @@ async def test_get_logs_without_pages(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_get_logs_with_pages(db_session: AsyncSession):
+async def test_get_logs_with_pages(test_db_session: AsyncSession):
     """
     Тест корректности работы API и формат пагинированного ответа с указанием пагинации
     """
@@ -67,18 +67,18 @@ async def test_empty_page():
     """
     # имитация вызова API с неверным адресом
     client = TestClient(app)
-    response = client.get("/logs/?page=999&per_page=10")
+    response = client.get("/logs/?page=99&per_page=10")
     assert len(response.json()["logs"]) == 0
 
 
 @pytest.mark.asyncio
-async def test_get_logs_mocked(db_session: AsyncSession):
+async def test_get_logs_mocked(test_db_session: AsyncSession):
     """
     Тест корректности работы API и формат пагинированного ответа с "мок" данными
     """
     # Очищаем и добавляем ТОЛЬКО тестовые данные
-    await db_session.execute(delete(HistoryModel))
-    await db_session.commit()
+    await test_db_session.execute(delete(HistoryModel))
+    await test_db_session.commit()
 
     test_log = HistoryModel(
         address="test_address",
@@ -86,11 +86,11 @@ async def test_get_logs_mocked(db_session: AsyncSession):
         energy=50.0,
         balance=1000.0
     )
-    db_session.add(test_log)
-    await db_session.commit()
+    test_db_session.add(test_log)
+    await test_db_session.commit()
 
     # подмена зависимости БД
-    app.dependency_overrides[get_db] = lambda: db_session
+    app.dependency_overrides[get_db_session] = lambda: test_db_session
 
     # имитация вызова API с пагинацией
     client = TestClient(app)
@@ -105,7 +105,7 @@ async def test_get_logs_mocked(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_post_address(db_session: AsyncSession):
+async def test_post_address(test_db_session: AsyncSession):
     """
     Тест корректности работы API и формат данных JSON-ответов
     """
@@ -119,12 +119,12 @@ async def test_post_address(db_session: AsyncSession):
     with patch("tronpy.tron.Tron.get_account", return_value=mock_response), \
             patch("tronpy.tron.Tron.is_address", return_value=True):
         # подмена зависимости БД
-        app.dependency_overrides[get_db] = lambda: db_session
+        app.dependency_overrides[get_db_session] = lambda: test_db_session
 
         # имитация вызова API
         client = TestClient(app)
         response = client.post(
-            "/address/",
+            url="/address/",
             json={"address": "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL"}
         )
 

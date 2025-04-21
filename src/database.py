@@ -25,7 +25,7 @@ async_session = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Функция-генератор асинхронных сессий.
     """
@@ -42,7 +42,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """
-    Функция создает все таблицы при старте приложения
+    Функция инициализации (создания) таблицы
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -50,7 +50,7 @@ async def init_db() -> None:
 
 async def drop_db() -> None:
     """
-    Функция уУдаления всех таблиц (для тестов)
+    Функция удаления всех таблиц
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
