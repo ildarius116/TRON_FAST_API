@@ -4,6 +4,7 @@ from tronpy import AsyncTron
 from typing import Dict, Any
 from dotenv import load_dotenv
 
+from src.app.dependencies import PaginationDep
 from src.repositories.history import HistoryRepo
 from src.schemas.address import AddressRequestSchema, AddressResponseSchema
 from src.schemas.history import HistoryResponseSchemas
@@ -64,7 +65,7 @@ async def get_address_info(request: AddressRequestSchema) -> Dict[str, Any]:
             tags=["Получение данных TRON-кошельков"],
             summary="История запросов",
             )
-async def get_logs() -> Dict[str, Any]:
+async def get_logs(pagination: PaginationDep) -> Dict[str, Any]:
     """
     Функция - эндпоинт "/logs/" запроса информации по истории полученных данных из сети "Трон"
 
@@ -72,5 +73,7 @@ async def get_logs() -> Dict[str, Any]:
     :параметр - per_page: Количество данных на одной странице \n
     :возврат: Пагинированный словарь данных истории запросов
     """
-    history_dict = await HistoryService(HistoryRepo).get_history_paginated(HistoryResponseSchemas())
+    schema = HistoryResponseSchemas()
+    schema.page, schema.per_page = pagination.page, pagination.per_page
+    history_dict = await HistoryService(HistoryRepo).get_history_paginated(schema)
     return history_dict
