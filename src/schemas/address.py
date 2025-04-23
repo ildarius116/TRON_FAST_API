@@ -11,3 +11,6 @@ class AddressResponseSchema(BaseModel):
     bandwidth: Optional[float]
     energy: Optional[float]
     balance: Optional[float]
+
+    class Config:
+        from_attributes = True
