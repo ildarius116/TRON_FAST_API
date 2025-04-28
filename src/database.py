@@ -1,14 +1,19 @@
 import os
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 from typing import AsyncGenerator
 
-from src.models.history import Base
+
+class Base(DeclarativeBase):
+    pass
+
 
 load_dotenv()
-DATABASE_URL = os.getenv('DATABASE_URL', "sqlite+aiosqlite:///./tron.db")
-DEBUG = os.getenv('DEBUG', False)
+DB_NAME = os.getenv('DB_NAME', "tron")
+DATABASE_URL = f"sqlite+aiosqlite:///./{DB_NAME}.db"
+DEBUG = os.getenv('DEBUG', 'False')
 
 engine: AsyncEngine = create_async_engine(
     DATABASE_URL,

@@ -1,22 +1,21 @@
-from sqlalchemy import Column, String, Float, TIMESTAMP, func, Integer
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import String, TIMESTAMP, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from typing import Optional
 from datetime import datetime
 
 from src.schemas.history import HistoryResponseSchema
-
-Base = declarative_base()
+from src.database import Base
 
 
 class HistoryModel(Base):
     __tablename__ = 'history'
 
-    id: int = Column(Integer, primary_key=True)
-    address: str = Column(String(42), nullable=False)
-    bandwidth: Optional[float] = Column(Float)
-    energy: Optional[float] = Column(Float)
-    balance: Optional[float] = Column(Float)
-    timestamp: datetime = Column(TIMESTAMP, server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True)
+    address: Mapped[str] = mapped_column(String(42), nullable=False)
+    bandwidth: Mapped[Optional[float]]
+    energy: Mapped[Optional[float]]
+    balance: Mapped[Optional[float]]
+    timestamp: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
     def to_read_model(self):
         return HistoryResponseSchema(

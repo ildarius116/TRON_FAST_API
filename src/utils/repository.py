@@ -33,7 +33,7 @@ class SQLAlchemyRepository(AbstractRepository):
 
     async def get_one(self, history_id):
         async with async_session() as session:
-            query = select(self.model).where(self.model.id==history_id)
+            query = select(self.model).filter_by(id=history_id)
             result = await session.execute(query)
             log = result.all()[0][0].to_read_model()
             return log
